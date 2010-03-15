@@ -43,6 +43,9 @@ using namespace std;
     const char* update_metric_sql = "UPDATE metric SET mean = ?1, std = ?2 WHERE id = ?3";
     sqlite3_prepare_v2(db, update_metric_sql, strlen(update_metric_sql), &update_metric_stmt, NULL);
 
+    const char* metricvalue_insert_sql = "INSERT INTO metric_value (metric_id, time, value) VALUES (?1, ?2, ?3)";
+    sqlite3_prepare_v2(db, metricvalue_insert_sql, strlen(metricvalue_insert_sql), &insert_metricvalue_stmt, NULL);
+
     //TODO: need to free the sql?
   }
 
@@ -85,10 +88,10 @@ using namespace std;
     sqlite3_reset(find_metrictype_stmt);
   }
 
-  void MetricHandler::updateMetric(char* metricTypeName, char* metricId, int time, double value)
+  void MetricHandler::updateMetric(char* metricTypeName, char* metricId, double time, double value)
   {
     MetricMap* metrics = mapMap[metricTypeName];
-    
+    int rc;
     Metric* metric = (*metrics)[metricId];
     if (metric == 0)
       {
@@ -110,6 +113,16 @@ using namespace std;
 
       }
     metric->update(time, value);
+
+    sqlite3_bind_int(insert_metricvalue_stmt, 1, metric->getId());
+    //    sqlite3_bind_blob(insert_metricvalue_stmt, 2, time, -1, SQLITE_STATIC);
+    sqlite3_bind_double(insert_metricvalue_stmt, 2, time);
+    sqlite3_bind_double(insert_metricvalue_stmt, 3, value);
+    rc = sqlite3_step(insert_metricvalue_stmt);
+    if (rc != SQLITE_DONE)
+      cerr << "ERROR inserting metric_value "<< metric->getId()<< " " << time << " " << value << endl;
+    sqlite3_reset(insert_metricvalue_stmt);
+
   }
 
   void MetricHandler::persistUpdates()
@@ -130,7 +143,6 @@ using namespace std;
 	sqlite3_bind_double(update_metric_stmt, 2, metric->getStd());
 	sqlite3_bind_int(update_metric_stmt, 3, metric->getId());
 	rc = sqlite3_step(update_metric_stmt);
-	cout << rc << endl;
 	sqlite3_reset(update_metric_stmt);	
       }
     }

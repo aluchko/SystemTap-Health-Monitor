@@ -79,10 +79,10 @@ probe kernel.trace("sched_switch") {
       pid_state[next_pid] = RUNNING;
       pid_names[next_pid] = kernel_string($next->comm);
     } else {
-      printf("unknown transition:\n");
-      printf("%s pid state: %d our state: %d\n",
-        pid_names[next_pid],
-        $next->state, pid_state[next_pid]);
+     # printf("unknown transition:\n");
+     # printf("%s pid state: %d our state: %d\n",
+     #   pid_names[next_pid],
+     #   $next->state, pid_state[next_pid]);
     }
   }
 }

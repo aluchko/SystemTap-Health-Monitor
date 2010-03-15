@@ -35,7 +35,7 @@ namespace systemtap
       cout << "ERR" << endl;
     if(sqlite3_exec(db,"CREATE TABLE metric (id INTEGER PRIMARY KEY, name TEXT, metric_type_id INTEGER, mean DOUBLE, std DOUBLE)", NULL, 0, &zErrMsg))
       cout << "ERR" << endl;
-    if (sqlite3_exec(db,"CREATE TABLE metric_value (id INTEGER PRIMARY KEY, metric_id INTEGER, time blob, mean DOUBLE, std DOUBLE)", NULL, 0, &zErrMsg))
+    if (sqlite3_exec(db,"CREATE TABLE metric_value (id INTEGER PRIMARY KEY, metric_id INTEGER, time double, value DOUBLE)", NULL, 0, &zErrMsg))
       cout << "ERR" << endl;
     
   }
@@ -102,7 +102,7 @@ namespace systemtap
 	// passes control to the inner loop that reads the list of metrics
 	cout << "HERE "<<line<<endl;
 	// the timestamp
-	int timeStamp = atof(line);
+	double timeStamp = atof(line);
 	while ( fgets( line, sizeof line, fpipe))
 	  {	    
 	    if (line[0] == '\n')

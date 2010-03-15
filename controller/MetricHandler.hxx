@@ -26,10 +26,11 @@ namespace systemtap
     sqlite3_stmt* insert_metric_stmt;
     sqlite3_stmt* update_metric_stmt;
     sqlite3_stmt* find_metric_stmt;
+    sqlite3_stmt* insert_metricvalue_stmt;
   public:
     MetricHandler(sqlite3* database);
     void addMetricType(MetricType* metricType);
-    void updateMetric(char* metricTypeName, char* metricId, int time, double value);
+    void updateMetric(char* metricTypeName, char* metricId, double time, double value);
     void persistUpdates();
   };
 }
