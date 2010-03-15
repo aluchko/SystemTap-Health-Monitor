@@ -6,11 +6,15 @@
 // Public License (GPL); either version 2, or (at your option) any
 // later version.
 #ifndef MESSAGE_H
-#define MESSAGE_H
+#define MESSAGE_H 1
+#include <iostream>
 
+namespace systemtap
+{
 class Message
 {
 public:
-  Message() {}
+  Message(FILE &fpipe) {}
 };
+}
 #endif

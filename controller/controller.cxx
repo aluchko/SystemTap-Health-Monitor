@@ -13,6 +13,9 @@
 #include <cstdlib> 
 #include <stdio.h>
 
+using namespace systemtap;
+sqlite3* db;
+
 int main()
 {
    FILE *fpipe;

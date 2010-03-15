@@ -1,0 +1,39 @@
+SystemTap Health Monitor: A system monitoring tool
+
+This is free software.
+See the COPYING file for redistribution/modification terms.
+
+There are three main components to the tool.
+
+monitors: This contains the suite of systemtap scripts that the SystemTap Health Monitor uses to collect data on the underlying system.
+
+controller: This is the daemon intended to controll the monitors.
+
+gui: The front end allowing the user to 
+
+Message Format:
+
+Scripts will communicate with the controller by printing messages to stdout.
+
+A message consists of a series of lines, presumably sent in a single burst. The first line of any message will be the timestamp of when the message was sent, as obtained with gettimeofday_us(). A message is terminated by a single blank line.
+
+The first message of any script will consist of the name of the script, as meant to be viewed by a user, and a list of the metrics that the script communicates, including optional minimum and maximum values which may be used to anchor the graphs. As well there is an optional default value for every metric which will be the value supplied if a value is not given in a particular time slice. Note that in the absence of a default value the value will default to 0.
+
+<timestamp>
+<script name>
+<metric>:[<minimum>]:[<maximum>]:[<default>]
+<metric>:[<minimum>]:[<maximum>]:[<default>]
+...
+
+Both <script name> and <metric> may be keys to externalized strings in future versions.
+
+After the start message all future messages will consist of lists of metric values. The format will be
+
+<timestamp>
+<metric>:<id>:<value>
+<metric>:<id>:<value>
+...
+
+Where metric is the name of the metric, id is the id of the particular entity this metric refers to (ie a particular process), and value is the value of the metric.
+
+In any particular message a metric-id pairing should appear at most once.

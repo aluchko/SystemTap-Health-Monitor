@@ -7,29 +7,54 @@
 // later version.
 
 #include "Metric.hxx"
-#include <cstring> 
+#include <cstring>
+#include <cmath>
 namespace systemtap
 {
-  char* id;
-  MetricType* type;
-  
-  Metric::Metric(MetricType* metricType, char* metricId) 
+
+  Metric::Metric(MetricType* metricType, char* metricName) 
   {
-    id = new char[strlen(metricId)+1];
-    std::strcpy(id,metricId);
+    name = new char[strlen(metricName)+1];
+    std::strcpy(name,metricName);
     type = metricType;
+    n = 0;
+    variance = 0;
+    m2 = 0;
+    mean = 0;
   }
 
-  void Metric::update(int time, double value){
-  }
-
-  double Metric::getAverage()
+  char* Metric::getName()
   {
-    return 0.0;
+    return name;
+  }
+
+  void Metric::setId(int dbId)
+  {
+    id = dbId;
+  }
+
+  int Metric::getId()
+  {
+    return id;
+  }
+
+  // Add a new sample to this metric
+  void Metric::update(int time, double value){
+    // formula to calculate running sum and variance
+    n++;
+    double delta = value - mean;
+    mean = mean + delta/n;
+    m2 = m2 + delta * (value - mean);
+  }
+
+  double Metric::getMean()
+  {
+    return mean;
   }
 
   double Metric::getStd()
   {
-    return 0.0;
+    variance = m2/(n - 1); // n-1 as we only have a sample of the metric
+    return std::sqrt(variance);
   }
 }

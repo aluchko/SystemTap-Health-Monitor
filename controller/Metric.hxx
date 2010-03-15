@@ -9,18 +9,30 @@
 #define METRIC_H 1
 
 #include "Message.hxx"
+#include "MetricType.hxx"
 
 // A Metric contains all the information for a single metric reported by a monitor.
 namespace systemtap
 {
 class Metric
 {
+private:
+  int id;
+  char* name;
+  MetricType* type;
+  int n;
+  double m2; // term for variance algorithm
+  double variance;
+  double mean;
 public:
-  Metric() {}
+  Metric(MetricType* metricType, char* metricName);
+  void setId(int id);
+  int getId();
+  char* getName();
   // update the Metric with the given message
-  void update(Message message);
+  void update(int time, double value);
   // the average value of the metric
-  double getAverage();
+  double getMean();
   // the standard deviation
   double getStd();
 };

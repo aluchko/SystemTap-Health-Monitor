@@ -37,9 +37,9 @@ probe kernel.trace("sched_switch") {
       } else if ($prev->state == 0) {
         pid_state[previous_pid] = QUEUED;
       } else {
-        printf("unknown transition:\n");
-        printf("pid state: %d our state: %d\n",
-          $prev->state, pid_state[previous_pid]);
+#        printf("unknown transition:\n");
+#        printf("pid state: %d our state: %d\n",
+#          $prev->state, pid_state[previous_pid]);
       }
     } else if (pid_state[previous_pid] == RUNNING) {
       pid_names[previous_pid] = kernel_string($prev->comm);
@@ -54,15 +54,15 @@ probe kernel.trace("sched_switch") {
       } else if ($prev->state == 0) {
         pid_state[previous_pid] = QUEUED;
       } else {
-        printf("unknown transition:\n");
-        printf("pid state: %d our state: %d\n",
-          $prev->state, pid_state[previous_pid]);
+#        printf("unknown transition:\n");
+#        printf("pid state: %d our state: %d\n",
+#          $prev->state, pid_state[previous_pid]);
       }
     } else {
-      printf("unknown transition:\n");
-      printf("%s pid state: %d our state: %d\n",
-           pid_names[previous_pid],
-           $prev->state, pid_state[previous_pid]);
+ #     printf("unknown transition:\n");
+ #     printf("%s pid state: %d our state: %d\n",
+ #          pid_names[previous_pid],
+ #          $prev->state, pid_state[previous_pid]);
     }
   }
   if (next_pid) {
@@ -91,7 +91,7 @@ probe kernel.trace("sched_wakeup") {
   wakeup_pid = $p->pid;
   if ((!$success) && (pid_state[wakeup_pid] != SLEEPING)) next
   if (!wakeup_pid) next
-      pid_parent[wakeup_pid] = $p->parent->pid;
+  pid_parent[wakeup_pid] = $p->parent->pid;
       pid_tgid[wakeup_pid] = $p->tgid;
       pid_parent_names[wakeup_pid] = kernel_string($p->parent->comm);
       pid_rparent_names[wakeup_pid] = kernel_string($p->real_parent->comm);
@@ -112,9 +112,9 @@ probe kernel.trace("sched_wakeup") {
     pid_state[wakeup_pid] = QUEUED;
     pid_names[wakeup_pid] = kernel_string($p->comm);
   } else {
-    printf("unknown transition:\n");
-    printf("pid state: %d our state: %d\n",
-      $p->state, pid_state[wakeup_pid]);
+#    printf("unknown transition:\n");
+#    printf("pid state: %d our state: %d\n",
+#      $p->state, pid_state[wakeup_pid]);
   }
 }
 
@@ -130,16 +130,26 @@ probe timer.ms(1000) {
 #	      run_time[pid] = 0;
 #      }
   t = gettimeofday_us();
-  printf("S:%d", t);
-      printf ("plot ");
+  printf("%d\n", t);
+  
+#      printf ("plot ");
+#      foreach (tgid in tgid_run_time) {
+#      	      printf ("'-' title \"%d\" with lines,", tgid);
+#      }
+#      printf ("\n");
       foreach (tgid in tgid_run_time) {
-      	      printf ("'-' title \"%d\" with lines,", tgid);
+	if (pid_names[tgid] != "") {
+      	      printf ("usage:%\s:%d\n", pid_names[tgid], tgid_run_time[tgid]);
+}
       }
-      printf ("\n");
-      foreach (tgid in tgid_run_time) {
-      	      printf ("%\d\n\e\n", tgid_run_time[tgid]);
-      }
-  printf("E");
+  printf("\n");
+}
+
+probe begin {
+  printf("%d\n", gettimeofday_us());
+  printf("CPU Usage\n"); # script name
+  printf("usage:0:100:0\n"); # script name
+  printf("\n");
 }
 
 probe end {

@@ -7,3 +7,8 @@
 // later version.
 
 #include "Message.hxx"
+
+// A Message wraps around a single message sent from a monitor script. The Message object is designed to be a relatively simple object, simply parsing and storing the message recieved by the script.
+namespace systemtap
+{
+}

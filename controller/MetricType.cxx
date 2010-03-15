@@ -10,13 +10,16 @@
 #include <cstring> 
 namespace systemtap
 {
-   double min;
-    bool minSet;
-    double max;
-    bool maxSet;
-    double def;
-    bool defSet;
-    char* typeName;
+  void MetricType::setId(int dbId)
+  {
+    id = dbId;
+  }
+
+  int MetricType::getId()
+  {
+    return id;
+  }
+
   void MetricType::setName(char* metricName){
     typeName = new char[strlen(metricName)+1];
     strcpy(typeName, metricName);
