@@ -120,8 +120,8 @@ namespace systemtap
 	  }
 	//	pclose(fpipe);
 	iter++;
-	if (iter > 1)
-	  break;
+//	if (iter > 1)
+//	  break;
       }
     handler->persistUpdates();
   }
