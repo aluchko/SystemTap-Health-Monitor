@@ -12,7 +12,7 @@
 //constants
 global RUNNING=0, QUEUED=1, SLEEPING=2
 
-global run_time, queued_time,  sleep_time, io_wait_time, tgid_run_time
+global run_time, queued_time,  sleep_time, io_wait_time, tgid_run_time, prev_poll_time
 global pid_state, pid_names, pid_parent, pid_parent_names, pid_rparent_names, pid_tgid
 global previous_timestamp
 global io_wait_count
@@ -120,28 +120,16 @@ probe kernel.trace("sched_wakeup") {
 
 probe timer.ms(1000) {
 # times are stored in microseconds
-#pid_by_name = [];
-#tgid_run_time=[];
-  #    foreach (pid+ in run_time) {
- #     	      if (!(pid_tgid[pid] in tgid_run_time)) {
-#	      	 tgid_run_time[pid_tgid[pid]] = 0;
-#	      }
-#	      tgid_run_time[pid_tgid[pid]] += run_time[pid];
-#	      run_time[pid] = 0;
-#      }
   t = gettimeofday_us();
+  total_period = t - prev_poll_time;
   printf("%d\n", t);
-  
-#      printf ("plot ");
-#      foreach (tgid in tgid_run_time) {
-#      	      printf ("'-' title \"%d\" with lines,", tgid);
-#      }
-#      printf ("\n");
-      foreach (tgid in tgid_run_time) {
-	if (pid_names[tgid] != "") {
-      	      printf ("usage:%\s:%d\n", pid_names[tgid], tgid_run_time[tgid]);
-}
-      }
+  foreach (tgid in tgid_run_time) {
+    if (pid_names[tgid] != "") {
+      printf ("usage:%\s:%d.%d\n", pid_names[tgid], tgid_run_time[tgid]*100/total_period,(100000*tgid_run_time[tgid]/total_period)%1000);
+    }
+  }
+  delete tgid_run_time;
+  prev_poll_time = t;
   printf("\n");
 }
 
@@ -150,25 +138,5 @@ probe begin {
   printf("CPU Usage\n"); # script name
   printf("usage:0:100:0\n"); # script name
   printf("\n");
-}
-
-probe end {
-  t = gettimeofday_us();
-  foreach (pid in pid_state) {
-    if (pid_state[pid] == SLEEPING)
-      sleep_time[pid] += (t - previous_timestamp[pid]);
-    if (pid_state[pid] == QUEUED)
-      queued_time[pid] += (t - previous_timestamp[pid]);
-    if (pid_state[pid] == RUNNING)
-      run_time[pid] += (t - previous_timestamp[pid]);
-  }
-  printf ("%16s: %6s %10s %10s %10s %10s %10s %10s %10s %10s\n\n",
-         "execname", "pid", "pname",  "rpname", "realparent", "run(us)", "sleep(us)", "io_wait(us)",
-         "queued(us)", "total(us)")
-  foreach (pid+ in run_time) {
-    printf("%16s: %6d %16s %16s %10d %10d %10d %10d %10d %10d\n", 
-      pid_names[pid], pid, pid_parent_names[pid],pid_rparent_names[pid], pid_parent[pid], run_time[pid], sleep_time[pid], 
-      io_wait_time[pid], pid_tgid[pid],
-      (run_time[pid] + sleep_time[pid] + queued_time[pid]));
-  }
+  prev_poll_time = gettimeofday_us();
 }

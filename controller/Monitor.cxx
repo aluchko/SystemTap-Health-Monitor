@@ -33,7 +33,7 @@ namespace systemtap
     rc = sqlite3_open("/tmp/test.db", &db);
     if (sqlite3_exec(db,"CREATE TABLE metric_type (id INTEGER PRIMARY KEY, name TEXT, min DOUBLE, max DOUBLE, def DOUBLE)", NULL, 0, &zErrMsg))
       cout << "ERR" << endl;
-    if(sqlite3_exec(db,"CREATE TABLE metric (id INTEGER PRIMARY KEY, name TEXT, metric_type_id INTEGER, mean DOUBLE, std DOUBLE)", NULL, 0, &zErrMsg))
+    if(sqlite3_exec(db,"CREATE TABLE metric (id INTEGER PRIMARY KEY, name TEXT, metric_type_id INTEGER, mean DOUBLE, num_samples INTEGER, m2 DOUBLE)", NULL, 0, &zErrMsg))
       cout << "ERR" << endl;
     if (sqlite3_exec(db,"CREATE TABLE metric_value (id INTEGER PRIMARY KEY, metric_id INTEGER, time double, value DOUBLE)", NULL, 0, &zErrMsg))
       cout << "ERR" << endl;
@@ -103,26 +103,30 @@ namespace systemtap
 	cout << "HERE "<<line<<endl;
 	// the timestamp
 	double timeStamp = atof(line);
-	while ( fgets( line, sizeof line, fpipe))
+	int messageOver = 0;
+	while (!messageOver && fgets( line, sizeof line, fpipe))
 	  {	    
 	    if (line[0] == '\n')
-	      { // End of message block... what to do
+	      { // End of message block...
 		printf("END OF MESSAGE\n");
-		break;  // break from the inner message loop to the outer loop
+		messageOver = 1;
 	      }
-	    char* metricTypeName = strtok(line, ":");
-	    cout << metricTypeName << endl;
-	    char* metricName = strtok(NULL, ":");
-	    cout << metricName << endl;
-	    double value = atof(strtok(NULL, ":"));
-	    cout << value << endl;
-	    handler->updateMetric(metricTypeName, metricName, timeStamp, value);
+	    else {
+	      char* metricTypeName = strtok(line, ":");
+	      cout << metricTypeName << endl;
+	      char* metricName = strtok(NULL, ":");
+	      cout << metricName << endl;
+	      double value = atof(strtok(NULL, ":"));
+	      cout << value << endl;
+	      handler->updateMetric(metricTypeName, metricName, timeStamp, value);
+	    }
 	  }
 	//	pclose(fpipe);
 	iter++;
-//	if (iter > 1)
-//	  break;
+	//	if (iter > 1)
+	//	  break;
+	cout << "PERSIST" << endl;
+	handler->persistUpdates();
       }
-    handler->persistUpdates();
   }
 } 

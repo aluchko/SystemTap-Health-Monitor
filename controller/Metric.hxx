@@ -22,7 +22,6 @@ private:
   MetricType* type;
   int n;
   double m2; // term for variance algorithm
-  double variance;
   double mean;
 public:
   Metric(MetricType* metricType, char* metricName);
@@ -35,6 +34,13 @@ public:
   double getMean();
   // the standard deviation
   double getStd();
+  // generally only used when saving/loading from DB
+  void setMean(double mean);
+  void setM2(double m2);
+  void setNumSamples(int numSamples);
+  double getM2();
+  int getNumSamples();
+
 };
 }
 #endif

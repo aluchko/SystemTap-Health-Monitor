@@ -31,16 +31,16 @@ using namespace std;
     const char* mt_insert_sql = "INSERT INTO metric_type (name, min, max, def) VALUES (?1, ?2, ?3, ?4)";
     sqlite3_prepare_v2(db, mt_insert_sql, strlen(mt_insert_sql), &insert_metrictype_stmt, NULL);
 
-    const char* find_mt_sql = "select id from metric_type where name = ?";
+    const char* find_mt_sql = "select id, min, max, def from metric_type where name = ?";
     sqlite3_prepare_v2(db, find_mt_sql, strlen(find_mt_sql), &find_metrictype_stmt, NULL);
 
     const char* met_insert_sql = "INSERT INTO metric (name, metric_type_id) VALUES (?1, ?2)";
     sqlite3_prepare_v2(db, met_insert_sql, strlen(met_insert_sql), &insert_metric_stmt, NULL);
 
-    const char* find_metric_sql = "select id from metric where name = ?";
+    const char* find_metric_sql = "SELECT id, mean, num_samples, m2 from metric where name = ?";
     sqlite3_prepare_v2(db, find_metric_sql, strlen(find_metric_sql), &find_metric_stmt, NULL);
 
-    const char* update_metric_sql = "UPDATE metric SET mean = ?1, std = ?2 WHERE id = ?3";
+    const char* update_metric_sql = "UPDATE metric SET mean = ?1, num_samples = ?2, m2 = ?3 WHERE id = ?4";
     sqlite3_prepare_v2(db, update_metric_sql, strlen(update_metric_sql), &update_metric_stmt, NULL);
 
     const char* metricvalue_insert_sql = "INSERT INTO metric_value (metric_id, time, value) VALUES (?1, ?2, ?3)";
@@ -58,12 +58,8 @@ using namespace std;
     // see if this metricType is already in the database 
     sqlite3_bind_text(find_metrictype_stmt, 1, metricType->getName(), -1, SQLITE_STATIC);
     int rc = sqlite3_step(find_metrictype_stmt);
-    if (rc == SQLITE_ROW)
-      {
-	//read the row
-      }
-    else if (rc == SQLITE_DONE) 
-      { // new MetricType, create it
+    if (rc == SQLITE_DONE) 
+      { // wasn't stored in db already so create it and
 	// add the new metric type into the database
 	sqlite3_bind_text(insert_metrictype_stmt, 1, metricType->getName(), -1, SQLITE_STATIC);
 	if (metricType->isMinSet())
@@ -79,12 +75,17 @@ using namespace std;
 	sqlite3_reset(find_metrictype_stmt);
 	sqlite3_bind_text(find_metrictype_stmt, 1, metricType->getName(), -1, SQLITE_STATIC);
 	sqlite3_step(find_metrictype_stmt);
-	metricType->setId(sqlite3_column_int(find_metrictype_stmt,0));
       }
-    else 
-      {
+    else if (rc != SQLITE_ROW)
+      { 
 	cerr << "Unknown Error adding metric type: " << rc << endl;
+	sqlite3_reset(find_metric_stmt);
+	return;
       }
+    // if the return was an SQLITE_ROW we don't have to do anything except
+    // read the id as the other qualities of the metrictype shouldn't change
+    metricType->setId(sqlite3_column_int(find_metrictype_stmt,0));
+
     sqlite3_reset(find_metrictype_stmt);
   }
 
@@ -94,28 +95,46 @@ using namespace std;
     int rc;
     Metric* metric = (*metrics)[metricId];
     if (metric == 0)
-      {
+      { // metric wasn't loaded already, load now
 	MetricType* metricType = typeMap[metricTypeName];
 	metric = new Metric(metricType, metricId);
 	(*metrics)[metricId] = metric;
-	std::cout<< "Create new metric " << metricId << " " << metricType->getId() << std::endl;
 
-	// insert the new metric into the DB
-	sqlite3_bind_text(insert_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
-	sqlite3_bind_int(insert_metric_stmt, 2, metricType->getId());
-	sqlite3_step(insert_metric_stmt);
-	sqlite3_reset(insert_metric_stmt);
-	
+	// see if this is a metric we have in the db
 	sqlite3_bind_text(find_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
-	sqlite3_step(find_metric_stmt);
+	rc = sqlite3_step(find_metric_stmt);
+	if (rc == SQLITE_ROW) 
+	  { // found the record in the DB, grab the historical id, mean, and std
+	    metric->setMean(sqlite3_column_double(find_metric_stmt,1));
+	    metric->setNumSamples(sqlite3_column_int(find_metric_stmt,2));
+	    metric->setM2(sqlite3_column_double(find_metric_stmt,3));
+	  }
+	else if (rc == SQLITE_DONE)
+	  {  // metric wasn't in the DB, new record
+	    std::cout<< "Create new metric " << metricId << " " << metricType->getId() << std::endl;
+	    sqlite3_bind_text(insert_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
+	    sqlite3_bind_int(insert_metric_stmt, 2, metricType->getId());
+	    sqlite3_step(insert_metric_stmt);
+	    sqlite3_reset(insert_metric_stmt);
+
+	    // now find the id of the new record
+	    sqlite3_reset(find_metric_stmt);
+	    sqlite3_step(find_metric_stmt);
+	  }
+	else
+	  {
+	    cerr << "UNKNOWN ERROR retrieving metric " << metric->getName() << endl;
+	    sqlite3_reset(find_metric_stmt);
+	    return;
+	  }
+
+	// set the id, this is valid whichever branch we took
 	metric->setId(sqlite3_column_int(find_metric_stmt,0));
 	sqlite3_reset(find_metric_stmt);
-
       }
     metric->update(time, value);
 
     sqlite3_bind_int(insert_metricvalue_stmt, 1, metric->getId());
-    //    sqlite3_bind_blob(insert_metricvalue_stmt, 2, time, -1, SQLITE_STATIC);
     sqlite3_bind_double(insert_metricvalue_stmt, 2, time);
     sqlite3_bind_double(insert_metricvalue_stmt, 3, value);
     rc = sqlite3_step(insert_metricvalue_stmt);
@@ -138,12 +157,14 @@ using namespace std;
 
       for (mmi = mm->begin(); mmi != mm->end(); mmi++) {
 	Metric* metric = mmi->second;
-	cout << "Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << mmi->second->getStd() << std::endl;
+	cout << "Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << metric->getNumSamples() << " " << metric->getM2() << " " << metric->getStd() << std::endl;
 	sqlite3_bind_double(update_metric_stmt, 1, metric->getMean());
-	sqlite3_bind_double(update_metric_stmt, 2, metric->getStd());
-	sqlite3_bind_int(update_metric_stmt, 3, metric->getId());
+	sqlite3_bind_int(update_metric_stmt, 2, metric->getNumSamples());
+	sqlite3_bind_double(update_metric_stmt, 3, metric->getM2());
+	sqlite3_bind_int(update_metric_stmt, 4, metric->getId());
 	rc = sqlite3_step(update_metric_stmt);
-	sqlite3_reset(update_metric_stmt);	
+	sqlite3_reset(update_metric_stmt);
+	
       }
     }
   }

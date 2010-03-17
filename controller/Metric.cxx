@@ -18,7 +18,6 @@ namespace systemtap
     std::strcpy(name,metricName);
     type = metricType;
     n = 0;
-    variance = 0;
     m2 = 0;
     mean = 0;
   }
@@ -54,7 +53,34 @@ namespace systemtap
 
   double Metric::getStd()
   {
-    variance = m2/(n - 1); // n-1 as we only have a sample of the metric
+    if (n < 2) // better than an infinity
+      return std::sqrt(m2);
+    double variance = m2/(n - 1); // n-1 as we only have a sample of the metric
     return std::sqrt(variance);
+  }
+
+  void Metric::setMean(double value)
+  {
+    mean = value;
+  }
+
+  void Metric::setM2(double value)
+  {
+    m2 = value;
+  }
+
+  void Metric::setNumSamples(int value)
+  {
+    n = value;
+  }
+
+  double Metric::getM2()
+  {
+    return m2;
+  }
+
+  int Metric::getNumSamples()
+  {
+    return n;
   }
 }
