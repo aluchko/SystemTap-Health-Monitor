@@ -1,18 +1,18 @@
 import MetricTypeWindow
 import Metrics
-import gobject
 
 from time import sleep
-from threading import Thread
+import threading
 from pysqlite2 import dbapi2 as sqlite
 
 # The roll of this class is to keep the MetricTypeWindow supplied with the current list of MetricTypes, Metrics, and their current values.
-class QueryAgent(Thread):
+class QueryAgent(threading.Thread):
     def __init__ (self,metricTypeWindow):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.setup = False
         self.mtw = metricTypeWindow
         self.quit = False
+        self.stopthread = threading.Event()
 
     def update_metrics(self):
         print "update_metrics"
@@ -23,7 +23,7 @@ class QueryAgent(Thread):
         #TODO: add date column to tables to filter out old rows
         typeCursor.execute("SELECT id,name,min,max,def FROM metric_type");
         for metricTypeRow in typeCursor:
-            if (not metricTypeRow[0] in self.mtw.metricTypeList):
+            if metricTypeRow[0] not in self.mtw.metricTypeList:
                 metricType = Metrics.MetricType(metricTypeRow[0], metricTypeRow[1], metricTypeRow[2], metricTypeRow[3], metricTypeRow[4])
                 self.mtw.addMetricType(metricType)
 
@@ -31,14 +31,21 @@ class QueryAgent(Thread):
         metricCursor = self.connection.cursor()
         metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 GROUP BY m.id having mv.time = (select max(mv.time))")
 
+        # lock so none other messes around with metricList
+        self.mtw.lock.acquire()
         for metricRow in metricCursor:
-            if (not metricRow[0] in self.mtw.metricList):
+            # The metric could either have never been added or could have been removed
+            if metricRow[0] not in self.mtw.metricList:
                 metric = Metrics.Metric(metricRow[0], self.mtw.metricTypeList[metricRow[1]], metricRow[2], metricRow[3], metricRow[4], metricRow[5])
                 self.mtw.addMetric(metric)
-            metric = self.mtw.metricList[metricRow[0]]
             self.mtw.updateMetric(metricRow[0], metricRow[6])
+        self.mtw.lock.release()
 
     def run(self):
-        while not self.quit:
-            gobject.idle_add(self.update_metrics)
-            sleep(1)
+        while not self.stopthread.isSet():
+#            gobject.idle_add(self.update_metrics)
+            self.update_metrics()
+            sleep(2)
+
+    def stop():
+        self.stopthread.set()

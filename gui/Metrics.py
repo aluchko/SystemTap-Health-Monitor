@@ -8,6 +8,7 @@ class MetricType:
         self.min = min
         self.max = max
         self.default = default
+        self.timeout = 2 # default, set by db later
 
 class Metric:
     def __init__(self, id, metricType, name, mean, numSamples, m2):
