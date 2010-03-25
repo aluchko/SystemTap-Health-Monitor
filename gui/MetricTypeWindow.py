@@ -62,13 +62,11 @@ class MetricRowElement:
             # remove out elements from the table
             print "REMOVE " +self.metric.name
             table = self.table
-            gtk.gdk.threads_enter()
             table.remove(self.metricNameLabel)
             table.remove(self.metricValueLabel)
             table.remove(self.metricMeanLabel)
             table.remove(self.metricStdLabel)
             table.remove(self.metricButton)
-            gtk.gdk.threads_leave()
             return True
         return False
 
@@ -91,14 +89,10 @@ class MetricPurgeTimer(threading.Thread):
 class MetricTypeWindow:
     def delete_event(self, widget, event, data=None):
         print "KILL"
-        self.lock.acquire()
-        gtk.gdk.threads_enter()
-
-        gtk.main_quit()
-        self.metricPurgeTimer.quit = True
+        for t in self.threads:
+            t.stop()
         
-        gtk.gdk.threads_leave()
-        self.lock.release()
+        gtk.main_quit()
         return False
 
     def __init__(self, which):
@@ -134,6 +128,7 @@ class MetricTypeWindow:
 
         self.window.show()
         self.threads = [ QueryAgent.QueryAgent(self)]
+        self.lock = threading.RLock()
 
 
     def addMetricType(self, metricType):
