@@ -14,13 +14,16 @@ import Metrics
 import QueryAgent
 import time
 import threading
+from MetricGraph import MetricGraph
 
 class MetricRowElement:
 # This class is a holder for the widgets associated with a single metric row we don't add this object to the container itself since we add the widgets separately so the grid works
-    def __init__(self, table, metric):
+    def __init__(self, metricTypeWindow, table, metric):
         self.table = table
         self.metric = metric
         self.lastUpdate = time.time()
+        self.mtw = metricTypeWindow
+        self.graphing = False
 
     def attach(self, currentRow):
         metric = self.metric
@@ -45,22 +48,21 @@ class MetricRowElement:
         self.table.attach(self.metricButton, 4, 5, currentRow, currentRow+1)
         self.metricButton.show()
         self.lastValue = 45
+        self.metricButton.connect("clicked", self.mtw.metric_button_click, self)
 
     def updateValue(self, metricValue):
-        print "update "+self.metric.name
+#        print "update "+self.metric.name
         self.metricValueLabel.set_text(str(metricValue))
         self.metricValueLabel.show()
-        if (self.lastValue != metricValue):
-            self.lastUpdate = time.time()
-            self.lastValue = metricValue
+        self.lastUpdate = time.time()
+        self.lastValue = metricValue
         
 
     # returns true if we've purged ourselves from the list
     def checkPurge(self):
         # see if we've been too long without updating
-        if (self.lastUpdate + self.metric.metricType.timeout < time.time()):
-            # remove out elements from the table
-            print "REMOVE " +self.metric.name
+        if not self.graphing and self.lastUpdate + self.metric.metricType.timeout < time.time():
+            # remove old elements from the table
             table = self.table
             table.remove(self.metricNameLabel)
             table.remove(self.metricValueLabel)
@@ -83,10 +85,25 @@ class MetricPurgeTimer(threading.Thread):
         while not self.stopthread.isSet():
             self.metricTypeWindow.purgeOldMetrics(self.metricType)
             time.sleep(1)
-    def stop():
+
+    def stop(self):
         self.stopthread.set()
 
 class MetricTypeWindow:
+    def metric_button_click(self, widget, metricRowElement):
+        if not metricRowElement.graphing:
+            metricGraph = MetricGraph(metricRowElement.metric)
+            metricRowElement.graphing = True
+            metricRowElement.metricGraph = metricGraph
+            metricRowElement.metricButton.set_label("Stop Graphing")
+            self.threads.append(metricGraph)
+            metricGraph.start()
+        else:
+            metricRowElement.graphing = False
+            metricRowElement.metricGraph.stop()
+            metricRowElement.metricButton.set_label("Graph")
+            self.threads.remove(metricRowElement.metricGraph)
+
     def delete_event(self, widget, event, data=None):
         print "KILL"
         for t in self.threads:
@@ -94,6 +111,17 @@ class MetricTypeWindow:
         
         gtk.main_quit()
         return False
+
+    def quit(self, obj):
+        for t in self.threads:
+            t.stop()
+        
+        gtk.main_quit()
+        return False
+
+    def openGraph(self, metricTypeRow):
+        metricGraph  = MetricGraph.MetricGraph(metricTypeRow.metric)
+        self.threads.append(metricGraph)
 
     def __init__(self, which):
 
@@ -106,6 +134,7 @@ class MetricTypeWindow:
         # Create our window
         self.window = gtk.Dialog()
         self.window.connect("delete_event", self.delete_event)
+        self.window.connect("destroy", self.quit)
 
         # Set the border width 
         self.window.set_border_width(0)
@@ -172,7 +201,7 @@ class MetricTypeWindow:
         self.lock.acquire()
         gtk.gdk.threads_enter()
 
-        metricRowElement = MetricRowElement(self.table, metric)
+        metricRowElement = MetricRowElement(self, self.table, metric)
         metricRowElement.attach(self.currentRow)
         self.metricList[metric.id] = metricRowElement
         self.currentRow = self.currentRow+1
@@ -193,7 +222,6 @@ class MetricTypeWindow:
         self.lock.release()
         
     def purgeOldMetrics(self, metricType):
-        print "purge"
         self.lock.acquire()
         gtk.gdk.threads_enter()
 

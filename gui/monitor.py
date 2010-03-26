@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# systemtap health monitor
+# Copyright (C) 2010 Aaron Luchko
+#
+# This file is part of systemtap, and is free software.  You can
+# redistribute it and/or modify it under the terms of the GNU General
+# Public License (GPL); either version 2, or (at your option) any
+# later version.
 
 import pygtk
 pygtk.require('2.0')
@@ -17,10 +24,6 @@ def main():
 
 if __name__ =="__main__":
     metricWindow = MetricTypeWindow.MetricTypeWindow("usage")
- #   mt = Metrics.MetricType(1,"usage", 0, 100, 0)
-#    metricWindow.addMetricType(mt)
-#    metric = Metrics.Metric(1, mt, "firefox", 50, 20, 25)
- #   metricWindow.addMetric(metric)
     for t in metricWindow.threads:
         t.start()
         

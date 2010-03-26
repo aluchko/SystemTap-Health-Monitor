@@ -20,6 +20,7 @@ namespace systemtap
     n = 0;
     m2 = 0;
     mean = 0;
+    updated = false;
   }
 
   char* Metric::getName()
@@ -30,6 +31,7 @@ namespace systemtap
   void Metric::setId(int dbId)
   {
     id = dbId;
+    setUpdated(true);
   }
 
   int Metric::getId()
@@ -44,6 +46,7 @@ namespace systemtap
     double delta = value - mean;
     mean = mean + delta/n;
     m2 = m2 + delta * (value - mean);
+    setUpdated(true);
   }
 
   double Metric::getMean()
@@ -62,16 +65,19 @@ namespace systemtap
   void Metric::setMean(double value)
   {
     mean = value;
+    setUpdated(true);
   }
 
   void Metric::setM2(double value)
   {
     m2 = value;
+    setUpdated(true);
   }
 
   void Metric::setNumSamples(int value)
   {
     n = value;
+    setUpdated(true);
   }
 
   double Metric::getM2()
@@ -82,5 +88,15 @@ namespace systemtap
   int Metric::getNumSamples()
   {
     return n;
+  }
+
+  bool Metric::isUpdated()
+  {
+    return updated;
+  }
+
+  bool Metric::setUpdated(bool value)
+  {
+    updated = value;
   }
 }

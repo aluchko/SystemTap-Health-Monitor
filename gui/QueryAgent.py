@@ -13,12 +13,17 @@ class QueryAgent(threading.Thread):
         self.mtw = metricTypeWindow
         self.quit = False
         self.stopthread = threading.Event()
+        self.lastTime = 0
 
     def update_metrics(self):
         print "update_metrics"
-        if (not self.setup):
+        if (not self.setup): # create in this thread to be safe
             self.connection = sqlite.connect('/tmp/test.db')
             self.setup = True
+            # start with the previous to last sample
+            lastTimeCursor = self.connection.cursor()
+            lastTimeCursor.execute("select max(time) from metric_value where time < (select max(time) from metric_value)")
+            self.lastTime = lastTimeCursor.fetchone()[0]
         typeCursor = self.connection.cursor()
         #TODO: add date column to tables to filter out old rows
         typeCursor.execute("SELECT id,name,min,max,def FROM metric_type");
@@ -27,10 +32,14 @@ class QueryAgent(threading.Thread):
                 metricType = Metrics.MetricType(metricTypeRow[0], metricTypeRow[1], metricTypeRow[2], metricTypeRow[3], metricTypeRow[4])
                 self.mtw.addMetricType(metricType)
 
-        # Every metric and it's most recent value, not this isn't quite right as the time should be cutoff to sometime in the last cycle or so, unfortunately we lose precision in time since microseconds are too many digits to store in the DB
+        # Every metric and it's most recent value since our last check
         metricCursor = self.connection.cursor()
-        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 GROUP BY m.id having mv.time = (select max(mv.time))")
+        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id)")
 
+        # hrm, might miss a sample
+        lastTimeCursor = self.connection.cursor()
+        lastTimeCursor.execute("select max(time) from metric_value")
+        lastTime = lastTimeCursor.fetchone()[0]
         # lock so none other messes around with metricList
         self.mtw.lock.acquire()
         for metricRow in metricCursor:
@@ -44,8 +53,9 @@ class QueryAgent(threading.Thread):
     def run(self):
         while not self.stopthread.isSet():
 #            gobject.idle_add(self.update_metrics)
+            print "UPDATES"
             self.update_metrics()
             sleep(2)
 
-    def stop():
+    def stop(self):
         self.stopthread.set()

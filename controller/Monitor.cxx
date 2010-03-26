@@ -100,15 +100,15 @@ namespace systemtap
     while ( fgets( line, sizeof line, fpipe))
       { // This loop reads the first line of a message (the timestamp) than
 	// passes control to the inner loop that reads the list of metrics
-	cout << "HERE "<<line<<endl;
-	// the timestamp
-	double timeStamp = atof(line);
+	
+	double timeStamp = atof(line); // the timestamp
 	int messageOver = 0;
+	sqlite3_exec(db, "BEGIN TRANSACTION;", 0, 0, 0);
+
 	while (!messageOver && fgets( line, sizeof line, fpipe))
 	  {	    
 	    if (line[0] == '\n')
 	      { // End of message block...
-		printf("END OF MESSAGE\n");
 		messageOver = 1;
 	      }
 	    else {
@@ -121,11 +121,10 @@ namespace systemtap
 	      handler->updateMetric(metricTypeName, metricName, timeStamp, value);
 	    }
 	  }
+	sqlite3_exec(db, "COMMIT TRANSACTION;", 0, 0, 0);
+
 	//	pclose(fpipe);
 	iter++;
-	//	if (iter > 1)
-	//	  break;
-	cout << "PERSIST" << endl;
 	handler->persistUpdates();
       }
   }

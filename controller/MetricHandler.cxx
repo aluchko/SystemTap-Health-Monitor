@@ -133,7 +133,7 @@ using namespace std;
 	sqlite3_reset(find_metric_stmt);
       }
     metric->update(time, value);
-
+    cout << "Insert metricvalue " << metric->getName() << endl;
     sqlite3_bind_int(insert_metricvalue_stmt, 1, metric->getId());
     sqlite3_bind_double(insert_metricvalue_stmt, 2, time);
     sqlite3_bind_double(insert_metricvalue_stmt, 3, value);
@@ -150,6 +150,7 @@ using namespace std;
     MetricTypeMap::iterator mtmi; 
     MetricMapMap::iterator mmmi; 
     MetricMap::iterator mmi; 
+    sqlite3_exec(db, "BEGIN TRANSACTION;", 0, 0, 0);
     for (mtmi = typeMap.begin(); mtmi != typeMap.end(); mtmi++) {
       std::cout << "MetricType " << mtmi->second->getName() << std::endl;
       MetricType* metricType = mtmi->second;
@@ -157,15 +158,19 @@ using namespace std;
 
       for (mmi = mm->begin(); mmi != mm->end(); mmi++) {
 	Metric* metric = mmi->second;
-	cout << "Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << metric->getNumSamples() << " " << metric->getM2() << " " << metric->getStd() << std::endl;
-	sqlite3_bind_double(update_metric_stmt, 1, metric->getMean());
-	sqlite3_bind_int(update_metric_stmt, 2, metric->getNumSamples());
-	sqlite3_bind_double(update_metric_stmt, 3, metric->getM2());
-	sqlite3_bind_int(update_metric_stmt, 4, metric->getId());
-	rc = sqlite3_step(update_metric_stmt);
-	sqlite3_reset(update_metric_stmt);
-	
+	if (metric->isUpdated())
+	  {
+	    cout << "Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << metric->getNumSamples() << " " << metric->getM2() << " " << metric->getStd() << std::endl;
+	    sqlite3_bind_double(update_metric_stmt, 1, metric->getMean());
+	    sqlite3_bind_int(update_metric_stmt, 2, metric->getNumSamples());
+	    sqlite3_bind_double(update_metric_stmt, 3, metric->getM2());
+	    sqlite3_bind_int(update_metric_stmt, 4, metric->getId());
+	    rc = sqlite3_step(update_metric_stmt);
+	    sqlite3_reset(update_metric_stmt);
+	    metric->setUpdated(false);
+	  }
       }
     }
+    sqlite3_exec(db, "COMMIT TRANSACTION;", 0, 0, 0);
   }
 }
