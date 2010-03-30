@@ -37,7 +37,7 @@ using namespace std;
     const char* met_insert_sql = "INSERT INTO metric (name, metric_type_id) VALUES (?1, ?2)";
     sqlite3_prepare_v2(db, met_insert_sql, strlen(met_insert_sql), &insert_metric_stmt, NULL);
 
-    const char* find_metric_sql = "SELECT id, mean, num_samples, m2 from metric where name = ?";
+    const char* find_metric_sql = "SELECT id, mean, num_samples, m2 from metric where name = ? AND metric_type_id = ?";
     sqlite3_prepare_v2(db, find_metric_sql, strlen(find_metric_sql), &find_metric_stmt, NULL);
 
     const char* update_metric_sql = "UPDATE metric SET mean = ?1, num_samples = ?2, m2 = ?3 WHERE id = ?4";
@@ -79,7 +79,7 @@ using namespace std;
     else if (rc != SQLITE_ROW)
       { 
 	cerr << "Unknown Error adding metric type: " << rc << endl;
-	sqlite3_reset(find_metric_stmt);
+	sqlite3_reset(find_metrictype_stmt);
 	return;
       }
     // if the return was an SQLITE_ROW we don't have to do anything except
@@ -102,6 +102,7 @@ using namespace std;
 
 	// see if this is a metric we have in the db
 	sqlite3_bind_text(find_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
+	sqlite3_bind_int(find_metric_stmt, 2, metricType->getId());
 	rc = sqlite3_step(find_metric_stmt);
 	if (rc == SQLITE_ROW) 
 	  { // found the record in the DB, grab the historical id, mean, and std
@@ -114,9 +115,14 @@ using namespace std;
 	    std::cout<< "Create new metric " << metricId << " " << metricType->getId() << std::endl;
 	    sqlite3_bind_text(insert_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
 	    sqlite3_bind_int(insert_metric_stmt, 2, metricType->getId());
-	    sqlite3_step(insert_metric_stmt);
+	    do {
+	      cout << "WAIT1 " << metric->getId() << " " <<metricType->getId() << endl;
+	      rc = sqlite3_step(insert_metric_stmt);}
+	    while (rc == SQLITE_BUSY);
+	      
+	    if (rc != SQLITE_DONE)
+	      cerr << "ERROR inserting metric "<< metric->getId()<< " " << metric->getType()->getName() << " " << endl;
 	    sqlite3_reset(insert_metric_stmt);
-
 	    // now find the id of the new record
 	    sqlite3_reset(find_metric_stmt);
 	    sqlite3_step(find_metric_stmt);
@@ -133,13 +139,18 @@ using namespace std;
 	sqlite3_reset(find_metric_stmt);
       }
     metric->update(time, value);
-    cout << "Insert metricvalue " << metric->getName() << endl;
+    //    cout << "Insert metricvalue " << metric->getName() << " for " << metric->getType()->getName() << endl;
     sqlite3_bind_int(insert_metricvalue_stmt, 1, metric->getId());
     sqlite3_bind_double(insert_metricvalue_stmt, 2, time);
     sqlite3_bind_double(insert_metricvalue_stmt, 3, value);
-    rc = sqlite3_step(insert_metricvalue_stmt);
+    do {
+      cout << "WAIT2 " << metric->getId() << " " <<metric->getType()->getId() << endl;
+
+      rc = sqlite3_step(insert_metricvalue_stmt);}
+    while (rc == SQLITE_BUSY);
+
     if (rc != SQLITE_DONE)
-      cerr << "ERROR inserting metric_value "<< metric->getId()<< " " << time << " " << value << endl;
+      cerr << "ERROR " << rc << " inserting metric_value "<< metric->getId()<< " " << time << " " << value << endl;
     sqlite3_reset(insert_metricvalue_stmt);
 
   }

@@ -24,33 +24,29 @@ namespace systemtap
   // all the metric types
   MetricType metricTypes[10];
   int numMetricTypes = 0;
-
-  Monitor::Monitor(const char* script)
+  Monitor::Monitor(const char* monitorFile)
   {
-    cout << script << endl;
-    char *zErrMsg;
-    int rc;
-    rc = sqlite3_open("/tmp/test.db", &db);
-    if (sqlite3_exec(db,"CREATE TABLE metric_type (id INTEGER PRIMARY KEY, name TEXT, min DOUBLE, max DOUBLE, def DOUBLE)", NULL, 0, &zErrMsg))
-      cout << "ERR" << endl;
-    if(sqlite3_exec(db,"CREATE TABLE metric (id INTEGER PRIMARY KEY, name TEXT, metric_type_id INTEGER, mean DOUBLE, num_samples INTEGER, m2 DOUBLE)", NULL, 0, &zErrMsg))
-      cout << "ERR" << endl;
-    if (sqlite3_exec(db,"CREATE TABLE metric_value (id INTEGER PRIMARY KEY, metric_id INTEGER, time double, value DOUBLE)", NULL, 0, &zErrMsg))
-      cout << "ERR" << endl;
-    
+    command = monitorFile;
   }
-  
-  void Monitor::setName(char* scriptName) {
+
+  void Monitor::setName(const char* scriptName) {
     name = new char[strlen(scriptName)+1];
     strcpy(name, scriptName);
+  }
+
+  void* Monitor::start_thread(void* obj)
+  {
+    //All we do here is call the do_work() function
+    reinterpret_cast<Monitor *>(obj)->run();
   }
 
   void Monitor::run()
   {
     // This is the main control loop for this monitor. We let the script run and supply feedback in the form of messages. 
     FILE *fpipe;
-    const char *command="stap ../monitors/schedtimes.stp";
     char line[256];
+    sqlite3* db;
+    int rc = sqlite3_open("/tmp/test.db", &db);
     MetricHandler* handler = new MetricHandler(db);
   
     if ( !(fpipe = (FILE*)popen(command,"r")) )
@@ -113,11 +109,11 @@ namespace systemtap
 	      }
 	    else {
 	      char* metricTypeName = strtok(line, ":");
-	      cout << metricTypeName << endl;
+	      //	      cout << metricTypeName << endl;
 	      char* metricName = strtok(NULL, ":");
-	      cout << metricName << endl;
+	      //cout << metricName << endl;
 	      double value = atof(strtok(NULL, ":"));
-	      cout << value << endl;
+	      //cout << value << endl;
 	      handler->updateMetric(metricTypeName, metricName, timeStamp, value);
 	    }
 	  }

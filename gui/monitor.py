@@ -11,23 +11,30 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import sys, string
-import MetricTypeWindow, Metrics, QueryAgent
-#import gobject
+import AppWindow
+import QueryAgent
+import Metrics
+from threading import Thread
 gtk.gdk.threads_init()
-#gobject.threads_init()
- 
-def main():
-    # And of course, our main loop.
-    gtk.main()
-    # Control returns here when main_quit() is called
-    return 0         
 
-if __name__ =="__main__":
-    metricWindow = MetricTypeWindow.MetricTypeWindow("usage")
-    for t in metricWindow.threads:
-        t.start()
-        
-    gtk.gdk.threads_enter()
-    gtk.main()
-    gtk.gdk.threads_leave()
+from pysqlite2 import dbapi2 as sqlite
+
+# connection just to get the metricTypes
+connection = sqlite.connect('/tmp/test.db')
+mtCursor = connection.cursor()
+mtCursor.execute("SELECT id,name,min,max,def FROM metric_type")
+appWindow = AppWindow.AppWindow()
+for metricTypeRow in mtCursor:
+    metricType = Metrics.MetricType(metricTypeRow[0], metricTypeRow[1], metricTypeRow[2], metricTypeRow[3], metricTypeRow[4])
+    appWindow.addMetricType(metricType)
+
+# have to leave it since connections can't change threads
+connection.close()    
+
+queryAgent = QueryAgent.QueryAgent(appWindow)
+queryAgent.start()
+
+gtk.gdk.threads_enter()
+gtk.main()
+gtk.gdk.threads_leave()
 

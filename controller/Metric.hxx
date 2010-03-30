@@ -43,6 +43,7 @@ public:
   int getNumSamples();
   bool isUpdated();
   bool setUpdated(bool updated);
+  MetricType* getType(){return type;}
 
 };
 }
