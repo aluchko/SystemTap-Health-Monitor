@@ -34,7 +34,7 @@ int main()
 
   pthread_t thread1, thread2;
   Monitor* mon = new Monitor("stap ../monitors/schedtimes.stp");
-  Monitor* mon2 = new Monitor("stap ../monitors/s2.stp");
+  Monitor* mon2 = new Monitor("stap ../monitors/iotop.stp");
 
   pthread_create( &thread1, NULL, &Monitor::start_thread, mon);
   pthread_create( &thread2, NULL, &Monitor::start_thread, mon2);

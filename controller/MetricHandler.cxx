@@ -115,10 +115,10 @@ using namespace std;
 	    std::cout<< "Create new metric " << metricId << " " << metricType->getId() << std::endl;
 	    sqlite3_bind_text(insert_metric_stmt, 1, metric->getName(), -1, SQLITE_STATIC);
 	    sqlite3_bind_int(insert_metric_stmt, 2, metricType->getId());
-	    do {
-	      cout << "WAIT1 " << metric->getId() << " " <<metricType->getId() << endl;
-	      rc = sqlite3_step(insert_metric_stmt);}
-	    while (rc == SQLITE_BUSY);
+	    //	    do {
+	    // cout << "WAIT1 " << metric->getId() << " " <<metricType->getId() << endl;
+	      rc = sqlite3_step(insert_metric_stmt);
+	//while (rc == SQLITE_BUSY);
 	      
 	    if (rc != SQLITE_DONE)
 	      cerr << "ERROR inserting metric "<< metric->getId()<< " " << metric->getType()->getName() << " " << endl;
@@ -129,7 +129,7 @@ using namespace std;
 	  }
 	else
 	  {
-	    cerr << "UNKNOWN ERROR retrieving metric " << metric->getName() << endl;
+	    cerr << "UNKNOWN ERROR " << rc << " retrieving metric " << metric->getName() << endl;
 	    sqlite3_reset(find_metric_stmt);
 	    return;
 	  }
@@ -143,11 +143,11 @@ using namespace std;
     sqlite3_bind_int(insert_metricvalue_stmt, 1, metric->getId());
     sqlite3_bind_double(insert_metricvalue_stmt, 2, time);
     sqlite3_bind_double(insert_metricvalue_stmt, 3, value);
-    do {
-      cout << "WAIT2 " << metric->getId() << " " <<metric->getType()->getId() << endl;
+  // do {
+    //      cout << "WAIT2 " << metric->getId() << " " <<metric->getType()->getId() << endl;
 
-      rc = sqlite3_step(insert_metricvalue_stmt);}
-    while (rc == SQLITE_BUSY);
+      rc = sqlite3_step(insert_metricvalue_stmt);
+//  while (rc == SQLITE_BUSY);
 
     if (rc != SQLITE_DONE)
       cerr << "ERROR " << rc << " inserting metric_value "<< metric->getId()<< " " << time << " " << value << endl;
@@ -171,7 +171,7 @@ using namespace std;
 	Metric* metric = mmi->second;
 	if (metric->isUpdated())
 	  {
-	    cout << "Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << metric->getNumSamples() << " " << metric->getM2() << " " << metric->getStd() << std::endl;
+	    cout << "MT " << metric->getType()->getName()<<"Metric " << metric->getId() << " " << metric->getName() << " " << metric->getMean() << " " << metric->getNumSamples() << " " << metric->getM2() << " " << metric->getStd() << std::endl;
 	    sqlite3_bind_double(update_metric_stmt, 1, metric->getMean());
 	    sqlite3_bind_int(update_metric_stmt, 2, metric->getNumSamples());
 	    sqlite3_bind_double(update_metric_stmt, 3, metric->getM2());

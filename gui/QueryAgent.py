@@ -50,7 +50,8 @@ class QueryAgent(threading.Thread):
         mt_id_list = "(1,2)"
         # Every metric and it's most recent value since our last check
         metricCursor = self.connection.cursor()
-        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 and m.metric_type_id IN " + mt_id_list + " GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
+        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
+#        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 and m.metric_type_id IN " + mt_id_list + " GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
         print("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 and m.metric_type_id IN " + mt_id_list + " GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
 
         # hrm, might miss a sample

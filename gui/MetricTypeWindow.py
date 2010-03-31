@@ -35,11 +35,11 @@ class MetricRowElement:
         table.attach(self.metricValueLabel, 1, 2, currentRow, currentRow+1)
    #     self.metricValueLabel.show()
 
-        self.metricMeanLabel = gtk.Label(metric.mean)
+        self.metricMeanLabel = gtk.Label("%.2f" % metric.mean)
         self.table.attach(self.metricMeanLabel, 2, 3, currentRow, currentRow+1)
   #      self.metricMeanLabel.show()
 
-        self.metricStdLabel = gtk.Label(metric.std)
+        self.metricStdLabel = gtk.Label("%.2f" % metric.std)
         self.table.attach(self.metricStdLabel, 3, 4, currentRow, currentRow+1)
  #       self.metricStdLabel.show()
 
