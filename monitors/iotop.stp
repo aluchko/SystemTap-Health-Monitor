@@ -1,0 +1,38 @@
+#!/usr/bin/stap
+
+global reads, writes, total_io
+
+probe vfs.read {
+    reads[execname()] += $count
+}
+
+probe vfs.write {
+    writes[execname()] += $count
+}
+
+# print top 10 IO processes every 5 seconds
+probe timer.s(1) {
+    printf("%d\n", gettimeofday_us());
+    foreach (name in writes)
+        total_io[name] += writes[name]
+    foreach (name in reads)
+        total_io[name] += reads[name]
+    foreach (name in total_io- limit 10) {
+        printf("KB Read:%s:%d\n", name, reads[name]/1024)
+        printf("KB Written:%s:%d\n", name, writes[name]/1024)
+    }
+    delete reads
+    delete writes
+    delete total_io
+    print("\n")
+}
+
+probe begin {
+  printf("%d\n", gettimeofday_us());
+  printf("iotop\n"); # script name
+  printf("KB Read:0:0:0\n"); # script name
+  printf("KB Written:0:0:0\n"); # script name
+  printf("\n");
+#  prev_poll_time = gettimeofday_us();
+}
+
