@@ -16,7 +16,7 @@ import pygtk, gtk
 from time import sleep
 import threading
 import time
-from pysqlite2 import dbapi2 as sqlite
+import MySQLdb
 
 # The roll of this class is to keep the MetricTypeWindows supplied with the current list of Metrics and their current values.
 class QueryAgent(threading.Thread):
@@ -32,7 +32,7 @@ class QueryAgent(threading.Thread):
     def update_metrics(self):
         print "update_metrics "+str(time.time())
         if (not self.setup): # create in this thread to be safe
-            self.connection = sqlite.connect('/tmp/test.db')
+            self.connection = MySQLdb.connect(host="localhost", user="health", passwd="password", db="health")
             self.setup = True
             # start with the previous to last sample
             lastTimeCursor = self.connection.cursor()
@@ -50,9 +50,8 @@ class QueryAgent(threading.Thread):
         mt_id_list = "(1,2)"
         # Every metric and it's most recent value since our last check
         metricCursor = self.connection.cursor()
-        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
-#        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 and m.metric_type_id IN " + mt_id_list + " GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
-        print("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value from metric m, metric_value mv where m.id=mv.metric_id and m.num_samples > 1 and m.metric_type_id IN " + mt_id_list + " GROUP BY m.id having mv.time > " + str(self.lastTime) + " and mv.time = (select max(time) from metric_value where metric_value.metric_id=m.id) order by m.metric_type_id")
+        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value FROM metric m, metric_value mv WHERE m.id=mv.metric_id and m.num_samples > 1 AND mv.time > " + str(self.lastTime) + " AND mv.time = (select max(time) FROM metric_value WHERE metric_value.metric_id=m.id) GROUP BY m.id ORDER BY m.metric_type_id")
+        print("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value FROM metric m, metric_value mv WHERE m.id=mv.metric_id and m.num_samples > 1 AND mv.time > " + str(self.lastTime) + " AND mv.time = (select max(time) FROM metric_value WHERE metric_value.metric_id=m.id) GROUP BY m.id ORDER BY m.metric_type_id")
 
         # hrm, might miss a sample
         lastTimeCursor = self.connection.cursor()
@@ -68,6 +67,7 @@ class QueryAgent(threading.Thread):
 
         for metricRow in metricCursor:
             if not mt_id == metricRow[1]: # switch to new metricType
+                print "new mtw "+str(metricRow[1])
                 if not mtw == -1: # update the display of the last metricTypeWindow
                     mtw.purgeOldMetrics()
                     mtw.update()                    

@@ -1,2 +1,2 @@
 all:
-	g++ controller.cxx Monitor.cxx Message.cxx MetricType.cxx Metric.cxx MetricHandler.cxx `pkg-config --libs --cflags gtk+-2.0 libglade-2.0 sqlite3` -o controller
+	g++ controller.cxx Monitor.cxx Message.cxx MetricType.cxx Metric.cxx MetricHandler.cxx -Ilib -lmysqlclient -lmysqlpp -L/usr/lib64/mysql/ -I/usr/include/mysql -I/usr/include/mysql++ -o controller

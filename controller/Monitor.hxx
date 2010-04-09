@@ -11,7 +11,12 @@
 #include "Metric.hxx"
 #include "MetricType.hxx"
 #include "MetricHandler.hxx"
-#include <sqlite3.h>
+#include <mysql++.h>
+#include <iostream>
+#include <string>
+#include <cstdlib> 
+#include <cstdio>
+#include <cstring>
 
 // The monitor class wraps around a single SystemTap monitoring script.
 namespace systemtap

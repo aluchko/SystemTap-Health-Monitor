@@ -17,10 +17,12 @@ import Metrics
 from threading import Thread
 gtk.gdk.threads_init()
 
-from pysqlite2 import dbapi2 as sqlite
+import MySQLdb
 
 # connection just to get the metricTypes
-connection = sqlite.connect('/tmp/test.db')
+# connect
+connection = MySQLdb.connect(host="localhost", user="health", passwd="password", db="health")
+
 mtCursor = connection.cursor()
 mtCursor.execute("SELECT id,name,min,max,def FROM metric_type")
 appWindow = AppWindow.AppWindow()
@@ -29,7 +31,7 @@ for metricTypeRow in mtCursor:
     appWindow.addMetricType(metricType)
 
 # have to leave it since connections can't change threads
-connection.close()    
+connection.close()
 
 queryAgent = QueryAgent.QueryAgent(appWindow)
 queryAgent.start()

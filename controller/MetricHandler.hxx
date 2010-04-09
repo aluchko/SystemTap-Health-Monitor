@@ -12,23 +12,25 @@
 #include <tr1/unordered_map>
 //#include "DbHandler.hxx"
 #include <sstream>
-#include <sqlite3.h>
-
+#include <mysql++.h>
+#include <mysqld_error.h>
+#include <qparms.h>
 namespace systemtap
 {
 
   class MetricHandler
   {
   private:
-    sqlite3* db;
-    sqlite3_stmt* insert_metrictype_stmt;
-    sqlite3_stmt* find_metrictype_stmt;
-    sqlite3_stmt* insert_metric_stmt;
-    sqlite3_stmt* update_metric_stmt;
-    sqlite3_stmt* find_metric_stmt;
-    sqlite3_stmt* insert_metricvalue_stmt;
+    mysqlpp::Connection *conn;
+    mysqlpp::Query *insert_metrictype_stmt;
+    mysqlpp::Query *find_metrictype_stmt;
+    mysqlpp::Query *insert_metric_stmt;
+    mysqlpp::Query *update_metric_stmt;
+    mysqlpp::Query *find_metric_stmt;
+    mysqlpp::Query *insert_metricvalue_stmt;
+
   public:
-    MetricHandler(sqlite3* database);
+    MetricHandler(mysqlpp::Connection *connection);
     void addMetricType(MetricType* metricType);
     void updateMetric(char* metricTypeName, char* metricId, double time, double value);
     void persistUpdates();

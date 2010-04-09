@@ -7,14 +7,11 @@
 # Public License (GPL); either version 2, or (at your option) any
 # later version.
 
-from pysqlite2 import dbapi2 as sqlite
-
 from time import sleep
 import threading 
-from pysqlite2 import dbapi2 as sqlite
 import subprocess
 import Metrics
-
+import MySQLdb
 
 class MetricGraph(threading.Thread):
     def __init__ (self, metric):
@@ -29,7 +26,7 @@ class MetricGraph(threading.Thread):
     def updateGraph(self):
         print "GRAPH"
         if (not self.setup): # create in this thread to be safe
-            self.connection = sqlite.connect('/tmp/test.db')
+            self.connection = MySQLdb.connect(host="localhost", user="health", passwd="password", db="health")
             self.setup = True
         metricValueCursor = self.connection.cursor()
 

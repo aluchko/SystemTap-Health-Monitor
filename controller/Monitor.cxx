@@ -7,12 +7,10 @@
 // later version.
 
 #include "Monitor.hxx"
-#include <iostream>
-#include <string>
-#include <cstdlib> 
-#include <cstdio>
-#include <cstring>   /* for all the new-fangled string functions */
-
+#define DBHOST "localhost"
+#define USER "health"
+#define PASSWORD "password"
+#define DATABASE "health"
 
 namespace systemtap
 {
@@ -45,9 +43,14 @@ namespace systemtap
     // This is the main control loop for this monitor. We let the script run and supply feedback in the form of messages. 
     FILE *fpipe;
     char line[256];
-    sqlite3* db;
-    int rc = sqlite3_open("/tmp/test.db", &db);
-    MetricHandler* handler = new MetricHandler(db);
+
+   
+    mysqlpp::Connection conn(false);
+    if (!conn.connect(DATABASE, DBHOST, USER, PASSWORD)){
+      std::cout << "ERR" << std::endl;
+      exit(1);
+    }
+    MetricHandler* handler = new MetricHandler(&conn);
   
     if ( !(fpipe = (FILE*)popen(command,"r")) )
       {  // If fpipe is NULL
@@ -99,7 +102,7 @@ namespace systemtap
 	
 	double timeStamp = atof(line); // the timestamp
 	int messageOver = 0;
-	sqlite3_exec(db, "BEGIN TRANSACTION;", 0, 0, 0);
+	mysqlpp::Transaction trans(conn);
 
 	while (!messageOver && fgets( line, sizeof line, fpipe))
 	  {	    
@@ -117,9 +120,8 @@ namespace systemtap
 	      handler->updateMetric(metricTypeName, metricName, timeStamp, value);
 	    }
 	  }
-	sqlite3_exec(db, "COMMIT TRANSACTION;", 0, 0, 0);
+	trans.commit();
 
-	//	pclose(fpipe);
 	iter++;
 	handler->persistUpdates();
       }

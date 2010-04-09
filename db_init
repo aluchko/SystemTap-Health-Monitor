@@ -1,0 +1,2 @@
+create database health;
+grant all on health.* TO 'health'@localhost IDENTIFIED BY 'password';
