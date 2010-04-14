@@ -16,7 +16,7 @@ import tempfile
 import pygtk
 pygtk.require('2.0')
 import gtk
-#import MetricTypeWindow
+import datetime
 
 class MetricGraph(threading.Thread):
     def __init__ (self, metricRowElement):
@@ -56,12 +56,14 @@ class MetricGraph(threading.Thread):
 
         metricValueCursor = self.connection.cursor()
 
-        # make sure we only look at graphs with > 2 samples
-        GAP = "100000000" # last 100 seconds
-        metricValueCursor.execute("select time,value from metric_value where metric_id = " + str(self.metric.id) + " and time > (select max(time) - " +GAP+" from metric_value) order by time desc")
+        timeFmt = "%H:%M:%S";
 
         # gnuplot will write plot to this file
         self.p.stdin.write('set output "'+self.imageFile.name+'"\n')
+
+        self.p.stdin.write('set xdata time\n')
+        self.p.stdin.write('set timefmt "'+timeFmt+'"\n')
+#        self.p.stdin.write('set format x "'+timeFmt+'"\n')
 
         useMin = False
         useMax = False
@@ -71,7 +73,6 @@ class MetricGraph(threading.Thread):
         if self.max is not None:
             if self.metric.mean + self.metric.std * 2 > self.max:
                 useMax = True
-            
         if useMin and useMax:
             self.p.stdin.write("set yrange [" + str(self.min) + ":" + str(self.max) + "]\n")
         elif useMin:
@@ -79,28 +80,41 @@ class MetricGraph(threading.Thread):
         elif useMax:
             self.p.stdin.write("set yrange [:" + str(self.max) + "]\n")
 
-        self.p.stdin.write("plot '-' title '"+self.metric.name+"' with lines")
-        if not useMax:
-            self.p.stdin.write(", '-' title '95 CI upper bound' with lines")
-        if not useMin:
-            self.p.stdin.write(", '-' title '95 CI, lower bound' with lines")
-        self.p.stdin.write("\n")
-
         end = 0
-        for row in metricValueCursor:
-            self.p.stdin.write(str(row[1])+"\n")
+
+        # make sure we only look at graphs with > 2 samples
+        GAP = "100000000" # last 100 seconds
+        metricValueCursor.execute("select time,value from metric_value where metric_id = " + str(self.metric.id) + " and time > (select max(time) - " +GAP+" from metric_value) order by time")
+              
+        valueList = metricValueCursor.fetchall()
+        firstValue = valueList[0]
+        lastValue = valueList[len(valueList)-1]
+#        self.p.stdin.write('set xrange["' + datetime.datetime.fromtimestamp(firstValue[0]/1000000).strftime(timeFmt)+'":"'+datetime.datetime.fromtimestamp(lastValue[0]/1000000).strftime(timeFmt)+'"]\n')
+
+        self.p.stdin.write("plot '-' using 1:2 title '"+self.metric.name+"' with lines")
+        if not useMax:
+            self.p.stdin.write(", '-' using 1:2 title '95 CI upper bound' with lines")
+        if not useMin:
+            self.p.stdin.write(", '-' using 1:2 title '95 CI, lower bound' with lines")
+        self.p.stdin.write("\n")
+        i = 0
+        for row in valueList:
+            dt = datetime.datetime.fromtimestamp(row[0]/1000000).strftime("%H:%M:%S")
+            self.p.stdin.write(str(dt) + " " + str(row[1])+"\n")
             end = end+1
         self.p.stdin.write("e\n")
             
         # dumb way to get the number of rows
         if not useMax:
-            for i in range(1,end):
-                self.p.stdin.write(str(self.metric.mean + self.metric.std * 2)+"\n")
+            for row in valueList:
+                dt = datetime.datetime.fromtimestamp(row[0]/1000000).strftime("%H:%M:%S")
+                self.p.stdin.write(dt + " " +str(self.metric.mean + self.metric.std * 2)+"\n")
             self.p.stdin.write("e\n")
 
         if not useMin:
-            for i in range(1,end):
-                self.p.stdin.write(str(self.metric.mean - self.metric.std * 2)+"\n")
+            for row in valueList:
+                dt = datetime.datetime.fromtimestamp(row[0]/1000000).strftime("%H:%M:%S")
+                self.p.stdin.write(dt + " " +str(self.metric.mean - self.metric.std * 2)+"\n")
             self.p.stdin.write("e\n")
 
         sleep(0.2)
@@ -126,9 +140,7 @@ class MetricGraph(threading.Thread):
         print "QUIT GRAPH"
 
     def delete_event(self, widget, event, data=None):
-        print "clode graph"
         self.quit()
-        print "DONE"
         return False
 
     def destroy(self, widget, data=None):

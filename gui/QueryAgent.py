@@ -53,7 +53,6 @@ class QueryAgent(threading.Thread):
 
         # Every metric and it's most recent value since our last check
         metricCursor = self.connection.cursor()
-        print("select id, metric_type_id, name, mean, num_samples, m2, current_value FROM metric WHERE metric_type_id IN "+ mt_id_list + " AND num_samples > 1 AND time > " + str(self.lastTime) + " ORDER BY metric_type_id")
         metricCursor.execute("select id, metric_type_id, name, mean, num_samples, m2, current_value FROM metric WHERE metric_type_id IN "+ mt_id_list + " AND num_samples > 1 AND time > " + str(self.lastTime) + " ORDER BY metric_type_id")
 
         # hrm, might miss a sample

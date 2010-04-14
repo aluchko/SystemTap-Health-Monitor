@@ -111,6 +111,8 @@ probe timer.ms(1000) {
   printf("\n");
 }
 
+//probe syscall.exit { printf("%s[%d] exiting\n", execname(), tid())
+
 probe begin {
   printf("%d\n", gettimeofday_us());
   printf("CPU Usage\n"); # script name
