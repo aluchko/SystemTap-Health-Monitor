@@ -82,17 +82,38 @@ namespace systemtap
 	if (line[0] == '\n')
 	  {
 	    break;
-	  }
+	  }    
+	regex_t expr;
+	const char* pattern = "([^:]*):([^:]*):([^:]*):([^:]*)";
+	regmatch_t matches[8];
+	regcomp(&expr, pattern, REG_EXTENDED | REG_ICASE);
+	
+	// TODO: syntax check here
+	int res = regexec(&expr, line, 5, matches, 0);
 	MetricType* type = new MetricType();
-	char* metricTypeName = strtok(line, ":");
-	type->setName(metricTypeName);
-	char* minStr = strtok(NULL, ":");
-	type->setMin(atof(minStr));
-	char* maxStr = strtok(NULL, ":");
-	type->setMax(atof(maxStr));
-	char* defStr = strtok(NULL, ":");
-	type->setDefault(atof(defStr));
-	cout << type->getName() << " min " << type->getMin()<< endl;
+
+	int start;
+	int end = matches[1].rm_eo;
+
+	char* metricTypeName = new char[end+1];
+	metricTypeName[end] = '\0';
+	type->setName(strncpy(metricTypeName,line,end));
+
+	start = matches[2].rm_so;
+	end = matches[2].rm_eo;
+	if (start != end)
+	  type->setMin(atof((line + start)));
+
+	start = matches[3].rm_so;
+	end = matches[3].rm_eo;
+	if (start != end)
+	  type->setMax(atof((line + start)));
+
+	start = matches[4].rm_so;
+	end = matches[4].rm_eo;
+	if (start != end)
+	  type->setDefault(atof((line + start)));
+
 	handler->addMetricType(type);
       }
     int iter = 0;
@@ -125,5 +146,6 @@ namespace systemtap
 	iter++;
 	handler->persistUpdates();
       }
+    cout << "CLOSED" << endl;
   }
 } 

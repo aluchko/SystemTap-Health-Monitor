@@ -37,7 +37,7 @@ int main()
     mysqlpp::Query query = conn.query();
 
     try {
-      query.execute("CREATE TABLE metric_type (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT, min DOUBLE, max DOUBLE, def DOUBLE)");
+      query.execute("CREATE TABLE metric_type (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, min DOUBLE, max DOUBLE, def DOUBLE)");
     }  
     catch (const mysqlpp::BadQuery& er)
       { 
@@ -47,7 +47,7 @@ int main()
       }
     
     try {
-      query.execute("CREATE TABLE metric (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT, metric_type_id INTEGER, mean DOUBLE, num_samples INTEGER, m2 DOUBLE)");
+      query.execute("CREATE TABLE metric (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, metric_type_id INTEGER NOT NULL, mean DOUBLE, num_samples INTEGER, m2 DOUBLE, current_value DOUBLE NOT NULL, time DOUBLE NOT NULL)");
     }  
     catch (const mysqlpp::BadQuery& er)
       { 
@@ -57,7 +57,7 @@ int main()
       }
     
     try {
-      query.execute("CREATE TABLE metric_value (id INTEGER PRIMARY KEY AUTO_INCREMENT, metric_id INTEGER, time double, value DOUBLE)");
+      query.execute("CREATE TABLE metric_value (id INTEGER PRIMARY KEY AUTO_INCREMENT, metric_id INTEGER NOT NULL, time double NOT NULL, value DOUBLE NOT NULL, FOREIGN KEY (metric_id) REFERENCES metric(id))");
     }  
     catch (const mysqlpp::BadQuery& er)
       { 
@@ -67,7 +67,16 @@ int main()
       }
     
     try {
-      query.execute("CREATE INDEX mvorder ON metric_value (metric_id, time desc)");
+      query.execute("CREATE INDEX mv_order ON metric_value (metric_id, time desc)");
+    }  
+    catch (const mysqlpp::BadQuery& er)
+      { 
+	if (er.errnum() ==ER_DUP_KEYNAME) {}//this is fine
+	else
+	  cerr << "Query4 error: " << er.errnum() << ":" << er.what() << endl;
+       }
+    try {
+      query.execute("CREATE INDEX m_metric_type_id ON metric (metric_type_id)");
     }  
     catch (const mysqlpp::BadQuery& er)
       { 
@@ -77,16 +86,20 @@ int main()
        }
     conn.disconnect();
     
-    FILE *fpipe;
+    vector<const char*> monitors(2);
+    vector<pthread_t> threads(2);
+    monitors[0] = "stap ../monitors/schedtimes.stp";
+    monitors[1] = "stap ../monitors/iotop.stp";
+    for (int i = 0; i < 2; i++)
+      {
+	Monitor* monitor = new Monitor(monitors[i]);
+	pthread_t thread;
+	pthread_create( &thread, NULL, &Monitor::start_thread, monitor);
+	threads[i] = thread;
+      }
+    for (int i = 0; i < 2; i++)
+      pthread_join(threads[i], NULL);
     
-    pthread_t thread1, thread2;
-    Monitor* mon = new Monitor("stap ../monitors/schedtimes.stp");
-    Monitor* mon2 = new Monitor("stap ../monitors/iotop.stp");
-    
-    pthread_create( &thread1, NULL, &Monitor::start_thread, mon);
-    pthread_create( &thread2, NULL, &Monitor::start_thread, mon2);
-    pthread_join( thread1, NULL);
-    pthread_join( thread2, NULL);
     exit(0);
   }
   else {

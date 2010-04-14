@@ -17,6 +17,7 @@
 #include <cstdlib> 
 #include <cstdio>
 #include <cstring>
+#include <regex.h>
 
 // The monitor class wraps around a single SystemTap monitoring script.
 namespace systemtap

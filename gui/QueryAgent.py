@@ -41,17 +41,20 @@ class QueryAgent(threading.Thread):
         typeCursor = self.connection.cursor()
 
         # we don't want the mtws list to change from under us
-        mt_id_list = "(" #  yeah, only works for 1
+        mt_id_list = ""
         self.appWindow.lock.acquire()
         for mtw_id in self.appWindow.mtws:
-            mt_id_list = mt_id_list + str(mtw_id)
+            mt_id_list = mt_id_list + str(mtw_id) + ", "
+        if len(mt_id_list) == 0: # nothing to query
+            self.appWindow.lock.release()
+            return;
         self.appWindow.lock.release()
-        mt_id_list = mt_id_list + ")"
-        mt_id_list = "(1,2)"
+        mt_id_list = "(" + mt_id_list[:len(mt_id_list)-2] + ")"
+
         # Every metric and it's most recent value since our last check
         metricCursor = self.connection.cursor()
-        metricCursor.execute("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value FROM metric m, metric_value mv WHERE m.id=mv.metric_id and m.num_samples > 1 AND mv.time > " + str(self.lastTime) + " AND mv.time = (select max(time) FROM metric_value WHERE metric_value.metric_id=m.id) GROUP BY m.id ORDER BY m.metric_type_id")
-        print("select m.id, m.metric_type_id, m.name, m.mean, m.num_samples, m.m2, mv.value FROM metric m, metric_value mv WHERE m.id=mv.metric_id and m.num_samples > 1 AND mv.time > " + str(self.lastTime) + " AND mv.time = (select max(time) FROM metric_value WHERE metric_value.metric_id=m.id) GROUP BY m.id ORDER BY m.metric_type_id")
+        print("select id, metric_type_id, name, mean, num_samples, m2, current_value FROM metric WHERE metric_type_id IN "+ mt_id_list + " AND num_samples > 1 AND time > " + str(self.lastTime) + " ORDER BY metric_type_id")
+        metricCursor.execute("select id, metric_type_id, name, mean, num_samples, m2, current_value FROM metric WHERE metric_type_id IN "+ mt_id_list + " AND num_samples > 1 AND time > " + str(self.lastTime) + " ORDER BY metric_type_id")
 
         # hrm, might miss a sample
         lastTimeCursor = self.connection.cursor()
@@ -67,7 +70,6 @@ class QueryAgent(threading.Thread):
 
         for metricRow in metricCursor:
             if not mt_id == metricRow[1]: # switch to new metricType
-                print "new mtw "+str(metricRow[1])
                 if not mtw == -1: # update the display of the last metricTypeWindow
                     mtw.purgeOldMetrics()
                     mtw.update()                    
@@ -83,10 +85,10 @@ class QueryAgent(threading.Thread):
                 continue
             #mtw.lock.acquire()
            # gtk.gdk.threads_enter()
-#            mtw = self.mtws[metricRow[1]]
-            # lock so none other messes around with metricList
+
+            # lock so none other messes around with metricDict
             # The metric could either have never been added or could have been removed
-            if metricRow[0] not in mtw.metricList:
+            if metricRow[0] not in mtw.metricDict:
                 metric = Metrics.Metric(metricRow[0], mtw.metricType, metricRow[2], metricRow[3], metricRow[4], metricRow[5])
 
                 mtw.addMetric(metric)

@@ -23,6 +23,8 @@ private:
   int n;
   double m2; // term for variance algorithm
   double mean;
+  double currentVal;
+  double time;
   bool updated;
 public:
   Metric(MetricType* metricType, char* metricName);
@@ -30,7 +32,7 @@ public:
   int getId();
   char* getName();
   // update the Metric with the given message
-  void update(int time, double value);
+  void update(double time, double value);
   // the average value of the metric
   double getMean();
   // the standard deviation
@@ -39,8 +41,12 @@ public:
   void setMean(double mean);
   void setM2(double m2);
   void setNumSamples(int numSamples);
+  void setCurrentValue(double currentValue);
+  void setTime(double time);
   double getM2();
+  double getTime();
   int getNumSamples();
+  double getCurrentValue();
   bool isUpdated();
   bool setUpdated(bool updated);
   MetricType* getType(){return type;}

@@ -15,6 +15,7 @@
 #include <mysql++.h>
 #include <mysqld_error.h>
 #include <qparms.h>
+#include <iostream>
 namespace systemtap
 {
 
@@ -28,6 +29,7 @@ namespace systemtap
     mysqlpp::Query *update_metric_stmt;
     mysqlpp::Query *find_metric_stmt;
     mysqlpp::Query *insert_metricvalue_stmt;
+    std::string str(double value);
 
   public:
     MetricHandler(mysqlpp::Connection *connection);

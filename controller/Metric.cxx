@@ -28,6 +28,28 @@ namespace systemtap
     return name;
   }
 
+  void Metric::setTime(double t)
+  {
+    time = t;
+    setUpdated(true);
+  }
+
+  double Metric::getTime()
+  {
+    return time;
+  }
+
+  void Metric::setCurrentValue(double currentValue)
+  {
+    currentVal = currentValue;
+    setUpdated(true);
+  }
+
+  double Metric::getCurrentValue()
+  {
+    return currentVal;
+  }
+
   void Metric::setId(int dbId)
   {
     id = dbId;
@@ -40,12 +62,14 @@ namespace systemtap
   }
 
   // Add a new sample to this metric
-  void Metric::update(int time, double value){
+  void Metric::update(double time, double value){
     // formula to calculate running sum and variance
     n++;
     double delta = value - mean;
     mean = mean + delta/n;
     m2 = m2 + delta * (value - mean);
+    setCurrentValue(value);
+    setTime(time);
     setUpdated(true);
   }
 
