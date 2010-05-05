@@ -14,6 +14,7 @@ import Metrics
 import time
 import threading
 from MetricGraph import MetricGraph
+import DateTimeChooser
 import gobject
 class MetricRowElement:
 # This class is a holder for the widgets associated with a single metric row we don't add this object to the container itself since we add the widgets separately so the grid works
@@ -148,24 +149,28 @@ class MetricTypeWindow:
         self.table.attach(usageLabel, 0, 5, 0, 1, yoptions=gtk.EXPAND)
         usageLabel.show()
 
+        dtChooser = DateTimeChooser.DateTimeChooser(self)
+        self.table.attach(dtChooser, 0, 5, 1, 2, yoptions=gtk.EXPAND)
+        
+
         # column headers, make clickable/sortable
         nameButton = gtk.Button("Metric Name")
-        self.table.attach(nameButton, 0, 1, 1, 2,  yoptions=gtk.EXPAND)
+        self.table.attach(nameButton, 0, 1, 2, 3,  yoptions=gtk.EXPAND)
         nameButton.show()
         nameButton.connect("clicked", self.sort_button_click, 0)
 
         valueButton = gtk.Button("Current Value")
-        self.table.attach(valueButton, 1, 2, 1, 2, yoptions=gtk.EXPAND)
+        self.table.attach(valueButton, 1, 2, 2, 3, yoptions=gtk.EXPAND)
         valueButton.show()
         valueButton.connect("clicked", self.sort_button_click, 1)
 
         meanButton = gtk.Button("Long Term Mean Value")
-        self.table.attach(meanButton, 2, 3, 1, 2, yoptions=gtk.EXPAND)
+        self.table.attach(meanButton, 2, 3, 2, 3, yoptions=gtk.EXPAND)
         meanButton.show()
         meanButton.connect("clicked", self.sort_button_click, 2)
 
         stdButton = gtk.Button("Standard Deviation")
-        self.table.attach(stdButton, 3, 4, 1, 2, yoptions=gtk.EXPAND)
+        self.table.attach(stdButton, 3, 4, 2, 3, yoptions=gtk.EXPAND)
         stdButton.show()
         stdButton.connect("clicked", self.sort_button_click, 3)
 
@@ -177,7 +182,7 @@ class MetricTypeWindow:
 
         metricList = self.metricDict.values()
         sortedList = sorted(metricList, key=itemgetter(self.column), reverse=self.reverseSort)
-        offset = 3;
+        offset = 4;
 
         # we can't move widgets around the table effectively, so we'll just re-write placed widgets to their correct values
 
