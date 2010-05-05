@@ -23,6 +23,12 @@ namespace systemtap
     updated = false;
   }
 
+  Metric::~Metric()
+  {
+    delete [] name;
+    delete [] type;
+  }
+
   char* Metric::getName()
   {
     return name;

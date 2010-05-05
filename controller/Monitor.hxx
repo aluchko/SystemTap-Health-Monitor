@@ -12,6 +12,7 @@
 #include "MetricType.hxx"
 #include "MetricHandler.hxx"
 #include <mysql++.h>
+#include <mysql.h>
 #include <iostream>
 #include <string>
 #include <cstdlib> 
@@ -27,10 +28,12 @@ namespace systemtap
 
   private:
     void setName(const char* name);
-    const char* command;
+    char* command;
+    char* name; // name of the underlying monitor
   public:
     void run();
     Monitor(const char* monitorFile);
+    ~Monitor();
     static void* start_thread(void* obj);
     // start the main loop of the monitor
   };

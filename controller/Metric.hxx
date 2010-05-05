@@ -28,6 +28,7 @@ private:
   bool updated;
 public:
   Metric(MetricType* metricType, char* metricName);
+  ~Metric();
   void setId(int id);
   int getId();
   char* getName();

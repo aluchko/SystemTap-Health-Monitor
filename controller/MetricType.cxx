@@ -10,6 +10,11 @@
 #include <cstring> 
 namespace systemtap
 {
+
+  MetricType::~MetricType()
+  {
+    delete [] typeName;
+  }
   void MetricType::setId(int dbId)
   {
     id = dbId;

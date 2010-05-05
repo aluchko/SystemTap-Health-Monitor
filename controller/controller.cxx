@@ -16,6 +16,7 @@
 
 /* MySQL Connector/C++ specific headers */
 #include <mysql++.h>
+#include <mysql.h>
 #include <mysqld_error.h>
 
 #define DBHOST "localhost"
@@ -30,61 +31,34 @@ using namespace systemtap;
 using namespace std;
 
 int main()
-{
+{ 
+  mysql_library_init(0, NULL, NULL);
   mysqlpp::Connection conn;
   if (conn.connect(DATABASE, DBHOST, USER, PASSWORD)){
     
     mysqlpp::Query query = conn.query();
+    
+    std::vector<std::string> createTableSQL= {"CREATE TABLE metric_type (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, min DOUBLE, max DOUBLE, def DOUBLE)",
+			       "CREATE TABLE metric (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, metric_type_id INTEGER NOT NULL, mean DOUBLE, num_samples INTEGER, m2 DOUBLE, current_value DOUBLE NOT NULL, time DOUBLE NOT NULL)",
+			       "CREATE TABLE metric_value (id INTEGER PRIMARY KEY AUTO_INCREMENT, metric_id INTEGER NOT NULL, time double NOT NULL, value DOUBLE NOT NULL, FOREIGN KEY (metric_id) REFERENCES metric(id))", 
+			       "CREATE INDEX mv_order ON metric_value (metric_id, time desc)"};
 
-    try {
-      query.execute("CREATE TABLE metric_type (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, min DOUBLE, max DOUBLE, def DOUBLE)");
-    }  
-    catch (const mysqlpp::BadQuery& er)
-      { 
-	if (er.errnum() == ER_TABLE_EXISTS_ERROR) {}//this is fine
-	else
-	  cerr << "Query1 error: " << er.errnum() << ":" << er.what() << endl;
+    for (int i = 0; i < 4; i++)
+      {
+	try 
+	  {
+	  query.execute(createTableSQL[i]);
+	  } 
+	catch (const mysqlpp::BadQuery& er)
+	  { 
+	    if (er.errnum() == ER_TABLE_EXISTS_ERROR || er.errnum() == ER_DUP_KEYNAME) {}//this is fine
+	    else
+	      cerr << "ERROR: in query " << createTableSQL[i] << " error " << er.errnum() << ":" << er.what() << endl;
+	  }
       }
-    
-    try {
-      query.execute("CREATE TABLE metric (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL, metric_type_id INTEGER NOT NULL, mean DOUBLE, num_samples INTEGER, m2 DOUBLE, current_value DOUBLE NOT NULL, time DOUBLE NOT NULL)");
-    }  
-    catch (const mysqlpp::BadQuery& er)
-      { 
-	if (er.errnum() == ER_TABLE_EXISTS_ERROR) {}//this is fine
-	else
-	  cerr << "Query2 error: " << er.errnum() << ":" << er.what() << endl;
-      }
-    
-    try {
-      query.execute("CREATE TABLE metric_value (id INTEGER PRIMARY KEY AUTO_INCREMENT, metric_id INTEGER NOT NULL, time double NOT NULL, value DOUBLE NOT NULL, FOREIGN KEY (metric_id) REFERENCES metric(id))");
-    }  
-    catch (const mysqlpp::BadQuery& er)
-      { 
-	if (er.errnum() == ER_TABLE_EXISTS_ERROR) {}//this is fine
-	else
-	  cerr << "Query3 error: " << er.errnum() << ":" << er.what() << endl;
-      }
-    
-    try {
-      query.execute("CREATE INDEX mv_order ON metric_value (metric_id, time desc)");
-    }  
-    catch (const mysqlpp::BadQuery& er)
-      { 
-	if (er.errnum() ==ER_DUP_KEYNAME) {}//this is fine
-	else
-	  cerr << "Query4 error: " << er.errnum() << ":" << er.what() << endl;
-       }
-    try {
-      query.execute("CREATE INDEX m_metric_type_id ON metric (metric_type_id)");
-    }  
-    catch (const mysqlpp::BadQuery& er)
-      { 
-	if (er.errnum() ==ER_DUP_KEYNAME) {}//this is fine
-	else
-	  cerr << "Query4 error: " << er.errnum() << ":" << er.what() << endl;
-       }
     conn.disconnect();
+    mysql_library_end(); // call to C api to clean up memory leaks
+    createTableSQL.clear();
     
     vector<const char*> monitors(2);
     vector<pthread_t> threads(2);
@@ -99,11 +73,8 @@ int main()
       }
     for (int i = 0; i < 2; i++)
       pthread_join(threads[i], NULL);
-    
-    exit(0);
   }
   else {
-    std::cerr << "DB connection failed: " << conn.error() << std::endl;
-    return 1; 
+    std::cerr << "DB connection failed: " << conn.error() << std::endl; 
   }
 }

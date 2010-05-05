@@ -16,18 +16,23 @@ namespace systemtap
 {
   using namespace std;
 
-  // name of the underlying monitor
-  char* name;
-
   // all the metric types
   MetricType metricTypes[10];
   int numMetricTypes = 0;
   Monitor::Monitor(const char* monitorFile)
   {
-    command = monitorFile;
+    command = new char[strlen(monitorFile)+1];
+    strcpy(command, monitorFile);
   }
 
-  void Monitor::setName(const char* scriptName) {
+  Monitor::~Monitor()
+  {
+    delete [] name;
+    delete [] command;
+  }
+
+  void Monitor::setName(const char* scriptName)
+  {
     name = new char[strlen(scriptName)+1];
     strcpy(name, scriptName);
   }
@@ -44,7 +49,8 @@ namespace systemtap
     FILE *fpipe;
     char line[256];
 
-   
+    mysql_library_init(0, NULL, NULL);
+
     mysqlpp::Connection conn(false);
     if (!conn.connect(DATABASE, DBHOST, USER, PASSWORD)){
       std::cout << "ERR" << std::endl;
@@ -87,17 +93,17 @@ namespace systemtap
 	const char* pattern = "([^:]*):([^:]*):([^:]*):([^:]*)";
 	regmatch_t matches[8];
 	regcomp(&expr, pattern, REG_EXTENDED | REG_ICASE);
-	
+
 	// TODO: syntax check here
 	int res = regexec(&expr, line, 5, matches, 0);
 	MetricType* type = new MetricType();
 
 	int start;
 	int end = matches[1].rm_eo;
-
 	char* metricTypeName = new char[end+1];
 	metricTypeName[end] = '\0';
 	type->setName(strncpy(metricTypeName,line,end));
+	delete [] metricTypeName;
 
 	start = matches[2].rm_so;
 	end = matches[2].rm_eo;
@@ -115,6 +121,11 @@ namespace systemtap
 	  type->setDefault(atof((line + start)));
 
 	handler->addMetricType(type);
+	regfree(&expr);
+
+	//	delete [] pattern;
+	//	delete &expr;
+	//delete [] &matches;
       }
     int iter = 0;
     while ( fgets( line, sizeof line, fpipe))
@@ -146,6 +157,8 @@ namespace systemtap
 	iter++;
 	handler->persistUpdates();
       }
+    delete[] &line;
     cout << "CLOSED" << endl;
+    mysql_library_end(); // call to C api to clean up memory leaks
   }
 } 
